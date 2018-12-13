@@ -28,6 +28,7 @@ class BaseTrack:
 		self.y = y
 		self.currentCar = currentCar
 		self.direction = '?'
+		self.isCollision = False
 
 class StraightTrack(BaseTrack):
 
@@ -58,6 +59,9 @@ def printField():
 		for cn in range(lineLen):
 			val = field[ln][cn]
 			if isinstance(val, BaseTrack):
+				if val.isCollision:
+					print(colored('X', 'red'), end='', )
+					continue
 				if isinstance(val.currentCar, Car):
 					char = '>'
 					if val.currentCar.direction == 'up':
@@ -124,15 +128,27 @@ with open('data-13.txt') as f:
 				car = Car(cn, ln, direction, item)
 				item.currentCar = car
 
-			if char == '/':
+			if char == '/': # todo: handle before and after for this item
 				item = StraightTrack(cn, ln, 0, '/', 0, 0)
+				if isinstance(field[ln][cn-1], StraightTrack):
+					field[ln][cn-1].after = item
+				elif isinstance(field[ln][cn-1], CrossTrack):
+					field[ln][cn-1].right = item
+				if isinstance(field[ln-1][cn], StraightTrack):
+					field[ln-1][cn].after = item
+				elif isinstance(field[ln-1][cn], CrossTrack):
+					field[ln-1][cn].bottom = item
 
-			if char == '\\':
+			if char == '\\': # todo: handle before and after for this item
 				item = StraightTrack(cn, ln, 0, '\\', field[ln][cn-1], 0)
 				if isinstance(field[ln][cn-1], StraightTrack):
 					field[ln][cn-1].after = item
 				elif isinstance(field[ln][cn-1], CrossTrack):
 					field[ln][cn-1].right = item
+				if isinstance(field[ln-1][cn], StraightTrack):
+					field[ln-1][cn].after = item
+				elif isinstance(field[ln-1][cn], CrossTrack):
+					field[ln-1][cn].bottom = item
 
 			if char == '+':
 				item = CrossTrack(cn, ln, field[ln][cn-1], 0, field[ln-1][cn], 0)
@@ -214,19 +230,18 @@ def makeMove():
 				nextCell = cell.right
 
 		cell.currentCar = 0
-		nextCell.currentCar = car
 		car.currentTrack = nextCell
 		car.x = nextCell.x
 		car.y = nextCell.y
+		if nextCell.currentCar != 0:
+			nextCell.isCollision = True
+			return True
+		nextCell.currentCar = car
 
+	return False
 	# todo: sort cars
-	# todo: check for collisions
 
-makeMove()
-printField()
-
-makeMove()
-printField()
-
-makeMove()
-printField()
+isCollision = False
+while not isCollision:
+	isCollision = makeMove()
+	printField()
