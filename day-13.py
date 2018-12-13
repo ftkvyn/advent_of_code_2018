@@ -128,7 +128,11 @@ with open('data-13.txt') as f:
 				item = StraightTrack(cn, ln, 0, '/', 0, 0)
 
 			if char == '\\':
-				item = StraightTrack(cn, ln, 0, '\\', 0, 0)
+				item = StraightTrack(cn, ln, 0, '\\', field[ln][cn-1], 0)
+				if isinstance(field[ln][cn-1], StraightTrack):
+					field[ln][cn-1].after = item
+				elif isinstance(field[ln][cn-1], CrossTrack):
+					field[ln][cn-1].right = item
 
 			if char == '+':
 				item = CrossTrack(cn, ln, field[ln][cn-1], 0, field[ln-1][cn], 0)
@@ -146,5 +150,83 @@ with open('data-13.txt') as f:
 			if car != 0:
 				cars.append(car)
 
+printField()
 
+def makeMove():
+	global field, cars, lineLen, linesNum
+	for _, car in enumerate(cars):
+		cell = car.currentTrack
+		nextCell = 0
+		if isinstance(cell, StraightTrack):
+			if car.direction == 'right' or car.direction == 'down':
+				nextCell = cell.after
+			else:
+				nextCell = cell.before
+			if cell.direction == '/':
+				if car.direction == 'up':
+					car.direction = 'right'
+				elif car.direction == 'left':
+					car.direction = 'down'
+				if car.direction == 'down':
+					car.direction = 'left'
+				elif car.direction == 'right':
+					car.direction = 'up'
+			elif cell.direction == '\\':
+				if car.direction == 'up':
+					car.direction = 'left'
+				elif car.direction == 'left':
+					car.direction = 'up'
+				if car.direction == 'down':
+					car.direction = 'right'
+				elif car.direction =='right':
+					car.direction = 'down'
+		elif isinstance(cell, CrossTrack):
+			moveDir = car.getTurn()
+			nextDir = ''
+			if moveDir == 'straight':
+				nextDir = car.direction
+			elif moveDir == 'left':
+				if car.direction == 'up':
+					nextDir = 'left'
+				elif car.direction == 'left':
+					nextDir = 'down'
+				if car.direction == 'down':
+					nextDir = 'right'
+				elif car.direction == 'right':
+					nextDir = 'up'
+			elif moveDir == 'right':
+				if car.direction == 'up':
+					nextDir = 'right'
+				elif car.direction == 'left':
+					nextDir = 'up'
+				if car.direction == 'down':
+					nextDir = 'left'
+				elif car.direction == 'right':
+					nextDir = 'down'
+			car.direction = nextDir
+			if car.direction == 'up':
+				nextCell = cell.top
+			elif car.direction == 'left':
+				nextCell = cell.left
+			if car.direction == 'down':
+				nextCell = cell.bottom
+			elif car.direction == 'right':
+				nextCell = cell.right
+
+		cell.currentCar = 0
+		nextCell.currentCar = car
+		car.currentTrack = nextCell
+		car.x = nextCell.x
+		car.y = nextCell.y
+
+	# todo: sort cars
+	# todo: check for collisions
+
+makeMove()
+printField()
+
+makeMove()
+printField()
+
+makeMove()
 printField()
