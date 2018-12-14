@@ -29,6 +29,7 @@ class BaseTrack:
 		self.currentCar = currentCar
 		self.direction = '?'
 		self.isCollision = False
+		self.isVisited = False
 
 class StraightTrack(BaseTrack):
 
@@ -37,6 +38,14 @@ class StraightTrack(BaseTrack):
 		self.direction = direction
 		self.before = before
 		self.after = after
+
+class TurnTrack(BaseTrack):
+
+	def __init__(self, x, y, currentCar, direction, horisontal, vertical):
+		BaseTrack.__init__(self, x, y, currentCar)
+		self.direction = direction
+		self.horisontal = horisontal
+		self.vertical = vertical
 
 class CrossTrack(BaseTrack):
 
@@ -72,7 +81,10 @@ def printField():
 						char = '<'
 					print(colored(char, 'green'), end='', )
 				else:
-					print(val.direction, end='')
+					char = val.direction
+					if(val.isVisited):
+						char = colored(char, 'yellow')
+					print(char, end='')
 			else:
 				print(val, end='')
 		print('')
@@ -94,20 +106,26 @@ with open('data-13.txt') as f:
 					field[ln][cn-1].after = item
 				elif isinstance(field[ln][cn-1], CrossTrack):
 					field[ln][cn-1].right = item
+				elif isinstance(field[ln][cn-1], TurnTrack):
+					field[ln][cn-1].horisontal = item
 
-			if char == '|':
+			elif char == '|':
 				item = StraightTrack(cn, ln, 0, '|', field[ln-1][cn], 0)
 				if isinstance(field[ln-1][cn], StraightTrack):
 					field[ln-1][cn].after = item
 				elif isinstance(field[ln-1][cn], CrossTrack):
 					field[ln-1][cn].bottom = item
+				elif isinstance(field[ln-1][cn], TurnTrack):
+					field[ln-1][cn].vertical = item
 
-			if char == '>' or char == '<':
+			elif char == '>' or char == '<':
 				item = StraightTrack(cn, ln, 0, '-', field[ln][cn-1], 0)
 				if isinstance(field[ln][cn-1], StraightTrack):
 					field[ln][cn-1].after = item
 				elif isinstance(field[ln][cn-1], CrossTrack):
 					field[ln][cn-1].right = item
+				elif isinstance(field[ln][cn-1], TurnTrack):
+					field[ln][cn-1].horisontal = item
 
 				direction = 'right'
 				if char == '<':
@@ -115,12 +133,14 @@ with open('data-13.txt') as f:
 				car = Car(cn, ln, direction, item)
 				item.currentCar = car
 
-			if char == 'v' or char == '^':
+			elif char == 'v' or char == '^':
 				item = StraightTrack(cn, ln, 0, '|', field[ln-1][cn], 0)
 				if isinstance(field[ln-1][cn], StraightTrack):
 					field[ln-1][cn].after = item
 				elif isinstance(field[ln-1][cn], CrossTrack):
 					field[ln-1][cn].bottom = item
+				elif isinstance(field[ln-1][cn], TurnTrack):
+					field[ln-1][cn].vertical = item
 
 				direction = 'up'
 				if char == 'v':
@@ -128,48 +148,54 @@ with open('data-13.txt') as f:
 				car = Car(cn, ln, direction, item)
 				item.currentCar = car
 
-			if char == '/': # todo: handle before and after for this item
-				item = StraightTrack(cn, ln, 0, '/', 0, 0)
-				if isinstance(field[ln][cn-1], StraightTrack):
+			elif char == '/' or char == '\\':
+				item = TurnTrack(cn, ln, 0, char, 0, 0)
+				if isinstance(field[ln][cn-1], StraightTrack) and field[ln][cn-1].direction == '-':
 					field[ln][cn-1].after = item
+					item.horisontal = field[ln][cn-1]
 				elif isinstance(field[ln][cn-1], CrossTrack):
 					field[ln][cn-1].right = item
-				if isinstance(field[ln-1][cn], StraightTrack):
+					item.horisontal = field[ln][cn-1]
+				elif isinstance(field[ln][cn-1], TurnTrack):
+					field[ln][cn-1].horisontal = item
+					item.horisontal = field[ln][cn-1]
+
+				if isinstance(field[ln-1][cn], StraightTrack) and field[ln-1][cn].direction == '|':
 					field[ln-1][cn].after = item
+					item.vertical = field[ln-1][cn]
 				elif isinstance(field[ln-1][cn], CrossTrack):
 					field[ln-1][cn].bottom = item
+					item.vertical = field[ln-1][cn]
+				elif isinstance(field[ln-1][cn], TurnTrack):
+					field[ln-1][cn].vertical = item
+					item.vertical = field[ln-1][cn]
 
-			if char == '\\': # todo: handle before and after for this item
-				item = StraightTrack(cn, ln, 0, '\\', field[ln][cn-1], 0)
-				if isinstance(field[ln][cn-1], StraightTrack):
-					field[ln][cn-1].after = item
-				elif isinstance(field[ln][cn-1], CrossTrack):
-					field[ln][cn-1].right = item
-				if isinstance(field[ln-1][cn], StraightTrack):
-					field[ln-1][cn].after = item
-				elif isinstance(field[ln-1][cn], CrossTrack):
-					field[ln-1][cn].bottom = item
-
-			if char == '+':
+			elif char == '+':
 				item = CrossTrack(cn, ln, field[ln][cn-1], 0, field[ln-1][cn], 0)
 				if isinstance(field[ln-1][cn], StraightTrack):
 					field[ln-1][cn].after = item
 				elif isinstance(field[ln-1][cn], CrossTrack):
 					field[ln-1][cn].bottom = item
+				elif isinstance(field[ln-1][cn], TurnTrack):
+					field[ln-1][cn].vertical = item
 
 				if isinstance(field[ln][cn-1], StraightTrack):
 					field[ln][cn-1].after = item
 				elif isinstance(field[ln][cn-1], CrossTrack):
 					field[ln][cn-1].right = item
+				elif isinstance(field[ln][cn-1], TurnTrack):
+					field[ln][cn-1].horisontal = item
 
 			field[ln][cn] =  item
 			if car != 0:
 				cars.append(car)
 
-printField()
+# printField()
 
 def makeMove():
 	global field, cars, lineLen, linesNum
+	cars = sorted(cars, key=lambda item: (item.y, item.x))
+	xx = 10
 	for _, car in enumerate(cars):
 		cell = car.currentTrack
 		nextCell = 0
@@ -178,24 +204,33 @@ def makeMove():
 				nextCell = cell.after
 			else:
 				nextCell = cell.before
+		if isinstance(cell, TurnTrack):
 			if cell.direction == '/':
 				if car.direction == 'up':
 					car.direction = 'right'
+					nextCell = cell.horisontal
 				elif car.direction == 'left':
 					car.direction = 'down'
-				if car.direction == 'down':
+					nextCell = cell.vertical
+				elif car.direction == 'down':
 					car.direction = 'left'
+					nextCell = cell.horisontal
 				elif car.direction == 'right':
 					car.direction = 'up'
+					nextCell = cell.vertical
 			elif cell.direction == '\\':
 				if car.direction == 'up':
 					car.direction = 'left'
+					nextCell = cell.horisontal
 				elif car.direction == 'left':
 					car.direction = 'up'
-				if car.direction == 'down':
+					nextCell = cell.vertical
+				elif car.direction == 'down':
 					car.direction = 'right'
+					nextCell = cell.horisontal
 				elif car.direction =='right':
 					car.direction = 'down'
+					nextCell = cell.vertical
 		elif isinstance(cell, CrossTrack):
 			moveDir = car.getTurn()
 			nextDir = ''
@@ -230,18 +265,28 @@ def makeMove():
 				nextCell = cell.right
 
 		cell.currentCar = 0
+		cell.isVisited = True
 		car.currentTrack = nextCell
 		car.x = nextCell.x
 		car.y = nextCell.y
 		if nextCell.currentCar != 0:
 			nextCell.isCollision = True
+			print(f'{nextCell.x},{nextCell.y}')
+			print(f'{cell.x},{cell.y}')
+			print(f'{car.x},{car.y}')
 			return True
 		nextCell.currentCar = car
-
+	
 	return False
-	# todo: sort cars
 
+moves = 0
 isCollision = False
 while not isCollision:
-	isCollision = makeMove()
-	printField()
+	isCollision = makeMove()	
+	moves += 1
+	if moves == 196:
+		printField()
+	# input("Next")
+
+print(moves)
+printField()
